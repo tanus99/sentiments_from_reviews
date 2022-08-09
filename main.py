@@ -6,10 +6,11 @@ from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import CountVectorizer
 from multiprocessing import Process, Queue, Pool
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, roc_auc_score
 from sklearn import metrics
+from sklearn.svm import SVC
 from sklearn.tree import export_graphviz, plot_tree
 from matplotlib import pyplot as plt
 import seaborn as sns
@@ -43,6 +44,7 @@ nltk.download('stopwords')
 
 
 # preprocessing function to clean the data
+# attributes for the parallel execution
 # s -> start index
 # e -> end index
 # q -> queue for sharing data
@@ -79,11 +81,13 @@ def preprocessing(s, e):
     print(q.qsize())
 
 
+# parallel execution to reduce the time
 def multiprocesses_it():
     index = df.shape[0] // 4
     p = Pool(4)
     params = ([0, index], [index, 2 * index], [2 * index, 3 * index], [3 * index, 4 * index + 1])
     p.starmap(preprocessing, params)
+    p.close()
     # p1 = Process(target=preprocessing, args=(0, index,q))
     # p2 = Process(target=preprocessing, args=(index, 2 * index,q))
     # p3 = Process(target=preprocessing, args=(2 * index, 3 * index,q))
@@ -112,7 +116,7 @@ def bag_of_words():
     # we extract till 500 features
     # "max_features" is the attribute to
     # experiment with to get better results
-    cv = CountVectorizer(max_features=500)
+    cv = CountVectorizer(max_features=1500)
 
     # X contains corpus transformed into an array
     global X
@@ -130,15 +134,39 @@ print(y.shape)
 
 X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2, random_state=6, stratify=y)
 
+# first classifier - RandomForest
 def random_forest_classifier():
-    model = RandomForestClassifier(n_estimators=501, criterion='entropy',
-                                   n_jobs=4, max_depth=10, min_samples_leaf=10)
-    model.fit(X_train,y_train)
-    y_pred = model.predict(X_test)
-    print(y_pred)
 
-    #print the confusion matrix to visualize correctly labeled data
-    cm = confusion_matrix(y_test,y_pred)
+    # let's see different configurations for the RandomForestClassifier
+    # using GridSearchCV
+    model = RandomForestClassifier(criterion='entropy', random_state=6)
+
+    params = [{'n_estimators': [500,1000,1500],'max_depth': [10,20,25],
+               'min_samples_leaf':[10,20,25]}]
+
+    grid_search = GridSearchCV(estimator=model, param_grid=params, scoring='accuracy',
+                               n_jobs=4, cv=5, verbose=3)
+
+    grid_search.fit(X_train,y_train)
+
+    # print the best configuration parameters and the model
+    print(f'The best parameters for the model are {grid_search.best_params_}')
+    print(f'The best score for the model is {grid_search.best_score_}')
+
+    # extract the best model
+    best_model = grid_search.best_estimator_
+
+    y_preds = best_model.fit(X_train,y_train)
+
+    # accuracy of the model (n. or % of corrected labeled data)
+    print(f'Accuracy of the model {metrics.accuracy_score(y_test, y_preds)}')
+
+    # roc_auc_score
+    roc_auc = roc_auc_score(y_test, y_preds)
+    print(f'ROC AUC : {roc_auc}')
+
+    # print the confusion matrix to visualize correctly labeled data
+    cm = confusion_matrix(y_test, y_preds)
 
     print('CONFUSION MATRIX\n\n', cm)
 
@@ -151,16 +179,13 @@ def random_forest_classifier():
     print(f'False Negative: {cm[1, 0]}\n')
 
     cm_matrix = pd.DataFrame(data=cm, columns=['Actual Positive:1', 'Actual Negative:0'],
-                                     index=['Predict Positive:1', 'Predict Negative:0'])
+                             index=['Predict Positive:1', 'Predict Negative:0'])
 
     sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
     plt.show()
 
-    print(f'Accuracy of the model {model.score(X_train,y_train)}')
-    print(f'Accuracy of the model {metrics.accuracy_score(y_test, y_pred)}')
-
-    #show the tree (the fifth just to see the general behavior)
-    tree = model.estimators_[5]
+    # show the tree (the fifth just to see the general behavior)
+    tree = best_model.estimators_[5]
     dot_data = StringIO()
     export_graphviz(tree, out_file=dot_data,
                     filled=True, rounded=True,
@@ -171,6 +196,53 @@ def random_forest_classifier():
     Image(graph.create_png())
 
 
+# second classifier - SVM
+def SVM():
+    svc = SVC(random_state=6)
+
+    #we will discuss these different configuration
+    params = [{'C':[0.001,0.01,0.1,1,10,100], 'kernel':['linear','poly', 'rbf'],
+               'gamma':[0.001,0.01,0.1,1,10,100]}]
+
+    #create the grid search object for the purpose
+    grid_search = GridSearchCV(estimator=svc, param_grid=params, scoring='accuracy',
+                               n_jobs=4, cv=5, verbose=3)
+
+    grid_search.fit(X_train, y_train)
+
+    # print the best configuration parameters and the model
+    print(f'The best parameters for the model are {grid_search.best_params_}')
+    print(f'The best score for the model is {grid_search.best_score_}')
+
+    # extract the best model
+    best_estimator = grid_search.best_estimator_
+
+    #evaluate the accuracy score and the ROC AUC score for the best estimator
+    y_preds = best_estimator.fit(X_train, y_train)
+
+    print(f'The accuracy score for the best SVM classifier is {metrics.accuracy_score(y_test,y_preds)}')
+    print(f'The ROC AUC score for the best SVM classifier is {roc_auc_score(y_test,y_preds)}')
+
+    # extract the confusion matrix for the best estimator
+    cm = confusion_matrix(y_test,y_preds)
+
+    print('CONFUSION MATRIX\n\n', cm)
+
+    print(f'True Positive: {cm[0, 0]}\n')
+
+    print(f'True Negative: {cm[1, 1]}\n')
+
+    print(f'False Positive: {cm[0, 1]}\n')
+
+    print(f'False Negative: {cm[1, 0]}\n')
+
+    cm_matrix = pd.DataFrame(data=cm, columns=['Actual Positive:1', 'Actual Negative:0'],
+                             index=['Predict Positive:1', 'Predict Negative:0'])
+
+    sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
+    plt.show()
 
 
-random_forest_classifier()
+
+#random_forest_classifier()
+SVM()
