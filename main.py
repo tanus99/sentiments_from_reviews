@@ -145,8 +145,8 @@ def random_forest_classifier():
     # using GridSearchCV
     model = RandomForestClassifier(criterion='entropy', random_state=6)
 
-    params = [{'n_estimators': [500], 'max_depth': [10],
-               'min_samples_leaf': [10]}]
+    params = [{'n_estimators': [500,1000,1500], 'max_depth': [10,20,25],
+               'min_samples_leaf': [10,20,25]}]
 
     grid_search = GridSearchCV(estimator=model, param_grid=params, scoring='accuracy',
                                n_jobs=-1, cv=5, verbose=3)
