@@ -18,8 +18,8 @@ def random_forest_classifier(X_train, y_train, X_test, y_test):
     # using GridSearchCV
     model = RandomForestClassifier(criterion='entropy', random_state=6)
 
-    params = [{'n_estimators': [500], 'max_depth': [10],
-               'min_samples_leaf': [10]}]
+    params = [{'n_estimators': [500,1000,1500], 'max_depth': [10,15,20],
+               'min_samples_leaf': [10,15,20]}]
 
     grid_search = GridSearchCV(estimator=model, param_grid=params, scoring='accuracy',
                                n_jobs=-1, cv=5, verbose=3)
