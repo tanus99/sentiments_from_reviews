@@ -4,6 +4,7 @@ import re
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
+<<<<<<< HEAD
 from sklearn.feature_extraction.text import CountVectorizer
 from multiprocessing import Process, Queue, Pool
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -17,6 +18,13 @@ import seaborn as sns
 from IPython.display import Image
 import pydotplus
 from six import StringIO
+=======
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from multiprocessing import Process, Queue, Pool
+from sklearn.model_selection import train_test_split, GridSearchCV
+from classifiers import *
+
+>>>>>>> 41798bf6dbfff1134243ce4b9a11ded304521245
 
 # just import and read the data
 df = pd.read_csv('./data/reviews.csv')
@@ -35,6 +43,10 @@ df.reset_index(drop=True, inplace=True)
 print(df.iloc[0:6])
 print(df.shape)
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 41798bf6dbfff1134243ce4b9a11ded304521245
 corpus = []
 
 # importing the so called stopwords
@@ -49,6 +61,11 @@ nltk.download('stopwords')
 # e -> end index
 # q -> queue for sharing data
 q = Queue()
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 41798bf6dbfff1134243ce4b9a11ded304521245
 def preprocessing(s, e):
     for i in range(s, e):
         # column Review Text, row ith
@@ -77,6 +94,11 @@ def preprocessing(s, e):
         # now we add the results in the queue
         q.put(review)
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 41798bf6dbfff1134243ce4b9a11ded304521245
     print(f"From {s} to {e} has finished")
     print(q.qsize())
 
@@ -113,7 +135,11 @@ def multiprocesses_it():
 
 # creating the Bag of Words model
 def bag_of_words():
+<<<<<<< HEAD
     # we extract till 500 features
+=======
+    # we extract till 1500 features
+>>>>>>> 41798bf6dbfff1134243ce4b9a11ded304521245
     # "max_features" is the attribute to
     # experiment with to get better results
     cv = CountVectorizer(max_features=1500)
@@ -126,6 +152,7 @@ def bag_of_words():
     global y
     y = df.iloc[:, 2].values
 
+<<<<<<< HEAD
 multiprocesses_it()
 bag_of_words()
 print(len(corpus))
@@ -246,3 +273,53 @@ def SVM():
 
 #random_forest_classifier()
 SVM()
+=======
+def tf_idf():
+    # object that will perform the tf-idf process
+    # tf = occurences of the term t in a document d / number of terms in d
+    # idf = log(number of documents / number of documents containing the term t)
+    vectorizer = TfidfVectorizer()
+    global X
+    X = vectorizer.fit_transform(corpus).toarray()
+
+    global y
+    y = df.iloc[:, 2].values
+
+    print("n_samples: %d, n_features: %d" % X.shape)
+
+    # # Select the first hundred documents from the data set
+    # tf_idf = pd.DataFrame(X.todense()).iloc[:100]
+    # tf_idf.columns = vectorizer.get_feature_names()
+    # tfidf_matrix = tf_idf.T
+    # tfidf_matrix.columns = ['response' + str(i) for i in range(1, 101)]
+    # tfidf_matrix['count'] = tfidf_matrix.sum(axis=1)
+    #
+    # # Top 100 words
+    # tfidf_matrix = tfidf_matrix.sort_values(by='count', ascending=False)[:100]
+    #
+    # # Print the first 100 words
+    # print(tfidf_matrix.drop(columns=['count']).head(100))
+
+
+multiprocesses_it()
+# bag_of_words()
+tf_idf()
+print(len(corpus))
+print(X.shape)
+print(y.shape)
+
+# splitting the dataset into train and test set
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=6, stratify=y)
+
+# results with the bag of words features extraction
+# random_forest_classifier(X_train, y_train, X_test, y_test)
+# SVM(X_train, y_train, X_test, y_test)
+# multinomial_NB(X_train, y_train, X_test, y_test)
+
+
+# results with the TD-IDF features extraction
+random_forest_classifier(X_train, y_train, X_test, y_test)
+# SVM(X_train, y_train, X_test, y_test)
+# multinomial_NB(X_train, y_train, X_test, y_test)
+
+>>>>>>> 41798bf6dbfff1134243ce4b9a11ded304521245
