@@ -1,30 +1,20 @@
+from datetime import time
+
 import pandas as pd
 import numpy as np
 import re
 import nltk
+from keras.optimizer_v2.adam import Adam
+from keras.preprocessing.text import Tokenizer
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
-<<<<<<< HEAD
-from sklearn.feature_extraction.text import CountVectorizer
-from multiprocessing import Process, Queue, Pool
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import confusion_matrix, roc_auc_score
-from sklearn import metrics
-from sklearn.svm import SVC
-from sklearn.tree import export_graphviz, plot_tree
-from matplotlib import pyplot as plt
-import seaborn as sns
-from IPython.display import Image
-import pydotplus
-from six import StringIO
-=======
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from multiprocessing import Process, Queue, Pool
 from sklearn.model_selection import train_test_split, GridSearchCV
+from tensorflow.python.keras.preprocessing.sequence import pad_sequences
+
 from classifiers import *
 
->>>>>>> 41798bf6dbfff1134243ce4b9a11ded304521245
 
 # just import and read the data
 df = pd.read_csv('./data/reviews.csv')
@@ -34,7 +24,7 @@ df = pd.read_csv('./data/reviews.csv')
 df = df.sample(frac=1, random_state=6).reset_index(drop=True)
 
 # selecting the relevant columns from the dataset
-df = df[['Review Text', 'Rating', 'Recommended IND']]
+df = df[['Review Text', 'Recommended IND']]
 # print(df.iloc[0:6])
 
 # I see if there are some missing values
@@ -43,10 +33,7 @@ df.reset_index(drop=True, inplace=True)
 print(df.iloc[0:6])
 print(df.shape)
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 41798bf6dbfff1134243ce4b9a11ded304521245
 corpus = []
 
 # importing the so called stopwords
@@ -61,11 +48,9 @@ nltk.download('stopwords')
 # e -> end index
 # q -> queue for sharing data
 q = Queue()
-<<<<<<< HEAD
-=======
 
 
->>>>>>> 41798bf6dbfff1134243ce4b9a11ded304521245
+# cleaning the data for all the classifiers except the CNN
 def preprocessing(s, e):
     for i in range(s, e):
         # column Review Text, row ith
@@ -94,11 +79,8 @@ def preprocessing(s, e):
         # now we add the results in the queue
         q.put(review)
 
-<<<<<<< HEAD
-=======
 
 
->>>>>>> 41798bf6dbfff1134243ce4b9a11ded304521245
     print(f"From {s} to {e} has finished")
     print(q.qsize())
 
@@ -135,11 +117,7 @@ def multiprocesses_it():
 
 # creating the Bag of Words model
 def bag_of_words():
-<<<<<<< HEAD
-    # we extract till 500 features
-=======
     # we extract till 1500 features
->>>>>>> 41798bf6dbfff1134243ce4b9a11ded304521245
     # "max_features" is the attribute to
     # experiment with to get better results
     cv = CountVectorizer(max_features=1500)
@@ -152,130 +130,8 @@ def bag_of_words():
     global y
     y = df.iloc[:, 2].values
 
-<<<<<<< HEAD
-multiprocesses_it()
-bag_of_words()
-print(len(corpus))
-print(X.shape)
-print(y.shape)
-
-X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2, random_state=6, stratify=y)
-
-# first classifier - RandomForest
-def random_forest_classifier():
-
-    # let's see different configurations for the RandomForestClassifier
-    # using GridSearchCV
-    model = RandomForestClassifier(criterion='entropy', random_state=6)
-
-    params = [{'n_estimators': [500,1000,1500],'max_depth': [10,20,25],
-               'min_samples_leaf':[10,20,25]}]
-
-    grid_search = GridSearchCV(estimator=model, param_grid=params, scoring='accuracy',
-                               n_jobs=4, cv=5, verbose=3)
-
-    grid_search.fit(X_train,y_train)
-
-    # print the best configuration parameters and the model
-    print(f'The best parameters for the model are {grid_search.best_params_}')
-    print(f'The best score for the model is {grid_search.best_score_}')
-
-    # extract the best model
-    best_model = grid_search.best_estimator_
-
-    y_preds = best_model.fit(X_train,y_train)
-
-    # accuracy of the model (n. or % of corrected labeled data)
-    print(f'Accuracy of the model {metrics.accuracy_score(y_test, y_preds)}')
-
-    # roc_auc_score
-    roc_auc = roc_auc_score(y_test, y_preds)
-    print(f'ROC AUC : {roc_auc}')
-
-    # print the confusion matrix to visualize correctly labeled data
-    cm = confusion_matrix(y_test, y_preds)
-
-    print('CONFUSION MATRIX\n\n', cm)
-
-    print(f'True Positive: {cm[0, 0]}\n')
-
-    print(f'True Negative: {cm[1, 1]}\n')
-
-    print(f'False Positive: {cm[0, 1]}\n')
-
-    print(f'False Negative: {cm[1, 0]}\n')
-
-    cm_matrix = pd.DataFrame(data=cm, columns=['Actual Positive:1', 'Actual Negative:0'],
-                             index=['Predict Positive:1', 'Predict Negative:0'])
-
-    sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
-    plt.show()
-
-    # show the tree (the fifth just to see the general behavior)
-    tree = best_model.estimators_[5]
-    dot_data = StringIO()
-    export_graphviz(tree, out_file=dot_data,
-                    filled=True, rounded=True,
-                    special_characters=True,
-                    class_names=['0', '1'])
-    graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
-    graph.write_png('reviews.png')
-    Image(graph.create_png())
-
-
-# second classifier - SVM
-def SVM():
-    svc = SVC(random_state=6)
-
-    #we will discuss these different configuration
-    params = [{'C':[0.001,0.01,0.1,1,10,100], 'kernel':['linear','poly', 'rbf'],
-               'gamma':[0.001,0.01,0.1,1,10,100]}]
-
-    #create the grid search object for the purpose
-    grid_search = GridSearchCV(estimator=svc, param_grid=params, scoring='accuracy',
-                               n_jobs=4, cv=5, verbose=3)
-
-    grid_search.fit(X_train, y_train)
-
-    # print the best configuration parameters and the model
-    print(f'The best parameters for the model are {grid_search.best_params_}')
-    print(f'The best score for the model is {grid_search.best_score_}')
-
-    # extract the best model
-    best_estimator = grid_search.best_estimator_
-
-    #evaluate the accuracy score and the ROC AUC score for the best estimator
-    y_preds = best_estimator.fit(X_train, y_train)
-
-    print(f'The accuracy score for the best SVM classifier is {metrics.accuracy_score(y_test,y_preds)}')
-    print(f'The ROC AUC score for the best SVM classifier is {roc_auc_score(y_test,y_preds)}')
-
-    # extract the confusion matrix for the best estimator
-    cm = confusion_matrix(y_test,y_preds)
-
-    print('CONFUSION MATRIX\n\n', cm)
-
-    print(f'True Positive: {cm[0, 0]}\n')
-
-    print(f'True Negative: {cm[1, 1]}\n')
-
-    print(f'False Positive: {cm[0, 1]}\n')
-
-    print(f'False Negative: {cm[1, 0]}\n')
-
-    cm_matrix = pd.DataFrame(data=cm, columns=['Actual Positive:1', 'Actual Negative:0'],
-                             index=['Predict Positive:1', 'Predict Negative:0'])
-
-    sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
-    plt.show()
-
-
-
-#random_forest_classifier()
-SVM()
-=======
+# object that will perform the tf-idf process
 def tf_idf():
-    # object that will perform the tf-idf process
     # tf = occurences of the term t in a document d / number of terms in d
     # idf = log(number of documents / number of documents containing the term t)
     vectorizer = TfidfVectorizer()
@@ -301,15 +157,15 @@ def tf_idf():
     # print(tfidf_matrix.drop(columns=['count']).head(100))
 
 
-multiprocesses_it()
+# multiprocesses_it()
 # bag_of_words()
-tf_idf()
+# tf_idf()
 print(len(corpus))
-print(X.shape)
-print(y.shape)
+# print(X.shape)
+# print(y.shape)
 
 # splitting the dataset into train and test set
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=6, stratify=y)
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=6, stratify=y)
 
 # results with the bag of words features extraction
 # random_forest_classifier(X_train, y_train, X_test, y_test)
@@ -318,8 +174,71 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 
 # results with the TD-IDF features extraction
-random_forest_classifier(X_train, y_train, X_test, y_test)
+# random_forest_classifier(X_train, y_train, X_test, y_test)
 # SVM(X_train, y_train, X_test, y_test)
 # multinomial_NB(X_train, y_train, X_test, y_test)
 
->>>>>>> 41798bf6dbfff1134243ce4b9a11ded304521245
+# preparing the data for the CNN model
+def preprocessing_CNN():
+    X = df['Review Text']
+    y = df['Recommended IND']
+
+    global X_train, X_test, y_train, y_test
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=6, stratify=y)
+
+    global max_words
+    max_words = len(set(" ".join(X_train).split()))
+    global max_len
+    max_len = X_train.apply(lambda x: len(x)).max()
+
+    # based on the vocabulary it associates an index for each word/token
+    tokenizer = Tokenizer(num_words=max_words)
+
+    tokenizer.fit_on_texts(X_train)
+
+    # then we return a list that assigns for each review the index of the words that it contains
+    X_train_seq = tokenizer.texts_to_sequences(X_train)
+    #we pad to be sure that all the reviews have the same lenght
+    X_train_seq = pad_sequences(X_train_seq,maxlen=max_len)
+
+
+preprocessing_CNN()
+model = get_cnn_model()
+
+loss = 'categorical_crossentropy'
+# loss = 'binary_crossentropy'
+metrics = ['accuracy']
+
+print("Starting...\n")
+
+start_time = time.time()
+
+print("\n\nCompliling Model ...\n")
+learning_rate = 0.001
+optimizer = Adam(learning_rate)
+# optimizer = Adam()
+
+model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+
+verbose = 1
+epochs = 100
+batch_size = 128
+validation_split = 0.2
+
+print("Trainning Model ...\n")
+
+model.fit(
+    X_train_seq,
+    Y_train,
+    batch_size=batch_size,
+    epochs=epochs,
+    verbose=verbose,
+    callbacks=callbacks,
+    validation_split=validation_split,
+    class_weight =class_weight
+)
+
+elapsed_time = time.time() - start_time
+elapsed_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+
+print("\nElapsed Time: " + elapsed_time)

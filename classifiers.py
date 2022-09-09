@@ -11,6 +11,8 @@ import seaborn as sns
 from IPython.display import Image
 import pydotplus
 from six import StringIO
+from keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dropout, BatchNormalization, Dense
+from keras.models import Sequential
 
 # first classifier - RandomForest
 def random_forest_classifier(X_train, y_train, X_test, y_test):
@@ -18,8 +20,8 @@ def random_forest_classifier(X_train, y_train, X_test, y_test):
     # using GridSearchCV
     model = RandomForestClassifier(criterion='entropy', random_state=6)
 
-    params = [{'n_estimators': [500,1000,1500], 'max_depth': [10,15,20],
-               'min_samples_leaf': [10,15,20]}]
+    params = [{'n_estimators': [500,1000,1500], 'max_depth': [10,20,25],
+               'min_samples_leaf': [10,20,25]}]
 
     grid_search = GridSearchCV(estimator=model, param_grid=params, scoring='accuracy',
                                n_jobs=-1, cv=5, verbose=3)
@@ -178,3 +180,27 @@ def multinomial_NB(X_train, y_train, X_test, y_test):
     # ris = MNB.predict(result)
     # print(ris)
 
+# Fourth classifier - CNN
+def get_cnn_model():
+    def get_cnn_model(max_words, max_len):
+        model = Sequential()
+
+        model.add(Embedding(max_words, 100, input_length=max_len))
+
+        model.add(Conv1D(1024, 3, padding='valid', activation='relu', strides=1))
+        model.add(GlobalMaxPooling1D())
+
+        model.add(Dropout(0.5))
+        model.add(BatchNormalization())
+        model.add(Dropout(0.5))
+
+        model.add(Dense(2048, activation='relu'))
+
+        model.add(Dropout(0.5))
+        model.add(BatchNormalization())
+        model.add(Dropout(0.5))
+
+        model.add(Dense(1, activation='sigmoid'))
+
+        model.summary()
+        return model
