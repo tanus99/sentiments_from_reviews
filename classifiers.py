@@ -14,14 +14,15 @@ from six import StringIO
 from keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dropout, BatchNormalization, Dense
 from keras.models import Sequential
 
+
 # first classifier - RandomForest
 def random_forest_classifier(X_train, y_train, X_test, y_test):
     # let's see different configurations for the RandomForestClassifier
     # using GridSearchCV
     model = RandomForestClassifier(criterion='entropy', random_state=6)
 
-    params = [{'n_estimators': [500,1000,1500], 'max_depth': [10,20,25],
-               'min_samples_leaf': [10,20,25]}]
+    params = [{'n_estimators': [500, 1000, 1500], 'max_depth': [10, 20, 25],
+               'min_samples_leaf': [10, 20, 25]}]
 
     grid_search = GridSearchCV(estimator=model, param_grid=params, scoring='accuracy',
                                n_jobs=-1, cv=5, verbose=3)
@@ -73,6 +74,7 @@ def random_forest_classifier(X_train, y_train, X_test, y_test):
     graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
     graph.write_png('reviews.png')
     Image(graph.create_png())
+
 
 # second classifier - SVM
 def SVM(X_train, y_train, X_test, y_test):
@@ -180,27 +182,48 @@ def multinomial_NB(X_train, y_train, X_test, y_test):
     # ris = MNB.predict(result)
     # print(ris)
 
+
 # Fourth classifier - CNN
-def get_cnn_model():
-    def get_cnn_model(max_words, max_len):
-        model = Sequential()
+def get_cnn_model(max_words, max_len):
+    model = Sequential()
 
-        model.add(Embedding(max_words, 100, input_length=max_len))
+# It is an improvement over more the traditional
+# bag-of-word model encoding schemes where large sparse
+# vectors were used to represent each word or to score
+# each word within a vector to represent an entire
+# vocabulary. These representations were sparse because
+# the vocabularies were vast and a given word or
+# document would be represented by a large vector
+# comprised mostly of zero values.
+# Instead, in an embedding, words are represented
+# by dense vectors where a vector represents the
+# projection of the word into a continuous vector space.
+# The position of a word within the vector space is
+# learned from text and is based on the words
+# that surround the word when it is used.
+    model.add(Embedding(max_words, 100, input_length=max_len))
 
-        model.add(Conv1D(1024, 3, padding='valid', activation='relu', strides=1))
-        model.add(GlobalMaxPooling1D())
+    model.add(Conv1D(1024, 3, padding='valid', activation='relu', strides=1))
+    model.add(GlobalMaxPooling1D())
+# The Dropout layer randomly sets input units to 0 with a
+# frequency of rate at each step during training time,
+# which helps prevent overfitting. Inputs not set to 0
+# are scaled up by 1/(1 - rate) such that the sum over all
+# inputs is unchanged.
+    model.add(Dropout(0.5))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
 
-        model.add(Dropout(0.5))
-        model.add(BatchNormalization())
-        model.add(Dropout(0.5))
+    model.add(Dense(2048, activation='relu'))
 
-        model.add(Dense(2048, activation='relu'))
+    model.add(Dropout(0.5))
+# normalizza il suo input in maniera tale da avere una
+# distribuzione con la media vicino allo 0 e deviazione
+# standard vicino a 1
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
 
-        model.add(Dropout(0.5))
-        model.add(BatchNormalization())
-        model.add(Dropout(0.5))
+    model.add(Dense(1, activation='sigmoid'))
 
-        model.add(Dense(1, activation='sigmoid'))
-
-        model.summary()
-        return model
+    model.summary()
+    return model

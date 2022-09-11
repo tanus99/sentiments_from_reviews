@@ -1,4 +1,4 @@
-from datetime import time
+from datetime import datetime as time
 
 import pandas as pd
 import numpy as np
@@ -187,8 +187,11 @@ def preprocessing_CNN():
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=6, stratify=y)
 
     global max_words
+    # metto insieme tutte le parole in un unico testo, splitto
+    # e conto il numero di parole uniche presenti
     max_words = len(set(" ".join(X_train).split()))
     global max_len
+    # calcolo la lunghezza di ogni recensione e considero la massima
     max_len = X_train.apply(lambda x: len(x)).max()
 
     # based on the vocabulary it associates an index for each word/token
@@ -197,26 +200,30 @@ def preprocessing_CNN():
     tokenizer.fit_on_texts(X_train)
 
     # then we return a list that assigns for each review the index of the words that it contains
+    global X_train_seq
     X_train_seq = tokenizer.texts_to_sequences(X_train)
     #we pad to be sure that all the reviews have the same lenght
     X_train_seq = pad_sequences(X_train_seq,maxlen=max_len)
 
+    global test_X_seq
+    test_X_seq = tokenizer.texts_to_sequences(X_test)
+    test_X_seq = pad_sequences(test_X_seq, maxlen=max_len)
+
 
 preprocessing_CNN()
-model = get_cnn_model()
+model = get_cnn_model(max_words, max_len)
 
-loss = 'categorical_crossentropy'
-# loss = 'binary_crossentropy'
+loss = 'binary_crossentropy'
 metrics = ['accuracy']
 
 print("Starting...\n")
 
-start_time = time.time()
+now = time.now()
+start_time = now.strftime("-j %B %Y %-H %M %-S")
 
 print("\n\nCompliling Model ...\n")
 learning_rate = 0.001
 optimizer = Adam(learning_rate)
-# optimizer = Adam()
 
 model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
@@ -226,19 +233,19 @@ batch_size = 128
 validation_split = 0.2
 
 print("Trainning Model ...\n")
-
 model.fit(
     X_train_seq,
-    Y_train,
+    y_train,
     batch_size=batch_size,
     epochs=epochs,
     verbose=verbose,
-    callbacks=callbacks,
-    validation_split=validation_split,
-    class_weight =class_weight
+    validation_split=validation_split
 )
 
-elapsed_time = time.time() - start_time
-elapsed_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+elapsed_time = time.now() - start_time
+elapsed_time = time.strftime("-j %B %Y %-H %M %-S", time.gmtime(elapsed_time))
 
 print("\nElapsed Time: " + elapsed_time)
+
+accuracy = model.evaluate(test_X_seq, y_test)
+print(accuracy)
