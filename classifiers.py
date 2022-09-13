@@ -1,11 +1,14 @@
+import time
+
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import confusion_matrix, roc_auc_score
+from sklearn.metrics import confusion_matrix, roc_auc_score, accuracy_score
 from sklearn.model_selection import GridSearchCV
 from sklearn import metrics
 from sklearn.svm import SVC
 from sklearn.tree import export_graphviz, plot_tree
 from sklearn.naive_bayes import MultinomialNB
+from keras.optimizer_v2.adam import Adam
 from matplotlib import pyplot as plt
 import seaborn as sns
 from IPython.display import Image
@@ -14,8 +17,10 @@ from six import StringIO
 from keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dropout, BatchNormalization, Dense
 from keras.models import Sequential
 
-
 # first classifier - RandomForest
+from preparing_methods import preprocessing_CNN
+
+
 def random_forest_classifier(X_train, y_train, X_test, y_test):
     # let's see different configurations for the RandomForestClassifier
     # using GridSearchCV
@@ -74,6 +79,7 @@ def random_forest_classifier(X_train, y_train, X_test, y_test):
     graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
     graph.write_png('reviews.png')
     Image(graph.create_png())
+    return best_model
 
 
 # second classifier - SVM
@@ -100,7 +106,7 @@ def SVM(X_train, y_train, X_test, y_test):
     # evaluate the accuracy score and the ROC AUC score for the best estimator
     y_preds = best_estimator.predict(X_test)
 
-    print(f'The accuracy score for the best SVM classifier is {metrics.accuracy_score(y_test, y_preds)}')
+    print(f'The accuracy score for the best SVM classifier is {accuracy_score(y_test, y_preds)}')
     print(f'The ROC AUC score for the best SVM classifier is {roc_auc_score(y_test, y_preds)}')
 
     # extract the confusion matrix for the best estimator
@@ -121,6 +127,7 @@ def SVM(X_train, y_train, X_test, y_test):
 
     sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
     plt.show()
+    return best_estimator
 
 
 # third classifier - Naive Bayes (Multinominal)
@@ -132,10 +139,10 @@ def multinomial_NB(X_train, y_train, X_test, y_test):
     y_preds = MNB.predict(X_test)
 
     # accuracy of the model (n. or % of corrected labeled data)
-    print(f'Accuracy of the model {metrics.accuracy_score(y_test, y_preds)}')
+    print(f'Accuracy of the model {accuracy_score(y_test, y_preds)}')
 
     # ROC AUC score of the model
-    print(f'ROC AUC score of the model {metrics.roc_auc_score(y_test, y_preds)}')
+    print(f'ROC AUC score of the model {roc_auc_score(y_test, y_preds)}')
 
     # print the confusion matrix to visualize correctly labeled data
     cm = confusion_matrix(y_test, y_preds)
@@ -155,6 +162,7 @@ def multinomial_NB(X_train, y_train, X_test, y_test):
 
     sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
     plt.show()
+    return MNB
 
     # trying to predict the sentiment (It's just a try man!)
     # string = 'I love this dress!'
@@ -184,32 +192,42 @@ def multinomial_NB(X_train, y_train, X_test, y_test):
 
 
 # Fourth classifier - CNN
-def get_cnn_model(max_words, max_len):
+def get_cnn_model(X_train, X_test, y_train, y_test):
+    # ---------- attributi per la rete convoluzionale ----------
+    loss = 'binary_crossentropy'
+    metrics = ['accuracy']
+    learning_rate = 0.001
+    verbose = 1
+    epochs = 50
+    batch_size = 128
+    validation_split = 0.2
+
+    max_words, max_len, X_train_seq, X_test_seq = preprocessing_CNN(X_train, X_test)
     model = Sequential()
 
-# It is an improvement over more the traditional
-# bag-of-word model encoding schemes where large sparse
-# vectors were used to represent each word or to score
-# each word within a vector to represent an entire
-# vocabulary. These representations were sparse because
-# the vocabularies were vast and a given word or
-# document would be represented by a large vector
-# comprised mostly of zero values.
-# Instead, in an embedding, words are represented
-# by dense vectors where a vector represents the
-# projection of the word into a continuous vector space.
-# The position of a word within the vector space is
-# learned from text and is based on the words
-# that surround the word when it is used.
+    # It is an improvement over more the traditional
+    # bag-of-word model encoding schemes where large sparse
+    # vectors were used to represent each word or to score
+    # each word within a vector to represent an entire
+    # vocabulary. These representations were sparse because
+    # the vocabularies were vast and a given word or
+    # document would be represented by a large vector
+    # comprised mostly of zero values.
+    # Instead, in an embedding, words are represented
+    # by dense vectors where a vector represents the
+    # projection of the word into a continuous vector space.
+    # The position of a word within the vector space is
+    # learned from text and is based on the words
+    # that surround the word when it is used.
     model.add(Embedding(max_words, 100, input_length=max_len))
 
     model.add(Conv1D(1024, 3, padding='valid', activation='relu', strides=1))
     model.add(GlobalMaxPooling1D())
-# The Dropout layer randomly sets input units to 0 with a
-# frequency of rate at each step during training time,
-# which helps prevent overfitting. Inputs not set to 0
-# are scaled up by 1/(1 - rate) such that the sum over all
-# inputs is unchanged.
+    # The Dropout layer randomly sets input units to 0 with a
+    # frequency of rate at each step during training time,
+    # which helps prevent overfitting. Inputs not set to 0
+    # are scaled up by 1/(1 - rate) such that the sum over all
+    # inputs is unchanged.
     model.add(Dropout(0.5))
     model.add(BatchNormalization())
     model.add(Dropout(0.5))
@@ -217,13 +235,64 @@ def get_cnn_model(max_words, max_len):
     model.add(Dense(2048, activation='relu'))
 
     model.add(Dropout(0.5))
-# normalizza il suo input in maniera tale da avere una
-# distribuzione con la media vicino allo 0 e deviazione
-# standard vicino a 1
+    # normalizza il suo input in maniera tale da avere una
+    # distribuzione con la media vicino allo 0 e deviazione
+    # standard vicino a 1
     model.add(BatchNormalization())
     model.add(Dropout(0.5))
 
     model.add(Dense(1, activation='sigmoid'))
 
     model.summary()
-    return model
+
+    print("Starting...\n")
+
+    start_time = time.time()
+
+    print("\n\nCompliling Model ...\n")
+
+    optimizer = Adam(learning_rate)
+
+    model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+
+    print("Trainning Model ...\n")
+    model.fit(
+        X_train_seq,
+        y_train,
+        batch_size=batch_size,
+        epochs=epochs,
+        verbose=verbose,
+        validation_split=validation_split,
+        use_multiprocessing=True
+    )
+
+    elapsed_time = time.time() - start_time
+    print(f"\nElapsed Time: {elapsed_time}")
+
+    # valutiamo l'accuracy sulla parte di test
+    accuracy = model.evaluate(X_test_seq, y_test)
+    print(accuracy)
+    # valutazione sulle predizioni (valori uguali) + ROC AUC score
+    y_preds = (model.predict(X_test_seq) > 0.5).astype('int32')
+    print(f'The accuracy score is {accuracy_score(y_test, y_preds)}')
+    print(f'The ROC AUC score is {roc_auc_score(y_test, y_preds)}')
+
+    # print the confusion matrix to visualize correctly labeled data
+    cm = confusion_matrix(y_test, y_preds)
+
+    print('CONFUSION MATRIX\n\n', cm)
+
+    print(f'True Positive: {cm[0, 0]}\n')
+
+    print(f'True Negative: {cm[1, 1]}\n')
+
+    print(f'False Positive: {cm[0, 1]}\n')
+
+    print(f'False Negative: {cm[1, 0]}\n')
+
+    cm_matrix = pd.DataFrame(data=cm, columns=['Actual Positive:1', 'Actual Negative:0'],
+                             index=['Predict Positive:1', 'Predict Negative:0'])
+
+    sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
+    plt.show()
+    return model, X_test_seq
