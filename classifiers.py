@@ -135,33 +135,6 @@ def SVM(X_train, y_train, X_test, y_test):
 def multinomial_NB(X_train, y_train, X_test, y_test):
     MNB = MultinomialNB()
     MNB.fit(X_train, y_train)
-
-    y_preds = MNB.predict(X_test)
-
-    # accuracy of the model (n. or % of corrected labeled data)
-    print(f'Accuracy of the model {accuracy_score(y_test, y_preds)}')
-
-    # ROC AUC score of the model
-    print(f'ROC AUC score of the model {roc_auc_score(y_test, y_preds)}')
-
-    # print the confusion matrix to visualize correctly labeled data
-    cm = confusion_matrix(y_test, y_preds)
-
-    print('CONFUSION MATRIX\n\n', cm)
-
-    print(f'True Positive: {cm[0, 0]}\n')
-
-    print(f'True Negative: {cm[1, 1]}\n')
-
-    print(f'False Positive: {cm[0, 1]}\n')
-
-    print(f'False Negative: {cm[1, 0]}\n')
-
-    cm_matrix = pd.DataFrame(data=cm, columns=['Actual Positive:1', 'Actual Negative:0'],
-                             index=['Predict Positive:1', 'Predict Negative:0'])
-
-    sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
-    plt.show()
     return MNB
 
     # trying to predict the sentiment (It's just a try man!)
@@ -192,7 +165,7 @@ def multinomial_NB(X_train, y_train, X_test, y_test):
 
 
 # Fourth classifier - CNN
-def get_cnn_model(X_train, X_test, y_train, y_test):
+def get_cnn_model(X_train, X_test, y_train):
     # ---------- attributi per la rete convoluzionale ----------
     loss = 'binary_crossentropy'
     metrics = ['accuracy']
@@ -202,7 +175,7 @@ def get_cnn_model(X_train, X_test, y_train, y_test):
     batch_size = 128
     validation_split = 0.2
 
-    max_words, max_len, X_train_seq, X_test_seq = preprocessing_CNN(X_train, X_test)
+    max_words, max_len, X_train_seq, _ = preprocessing_CNN(X_train, X_test)
     model = Sequential()
 
     # It is an improvement over more the traditional
@@ -267,32 +240,6 @@ def get_cnn_model(X_train, X_test, y_train, y_test):
     )
 
     elapsed_time = time.time() - start_time
-    print(f"\nElapsed Time: {elapsed_time}")
+    print(f"\nElapsed Time: {elapsed_time} sec")
 
-    # valutiamo l'accuracy sulla parte di test
-    accuracy = model.evaluate(X_test_seq, y_test)
-    print(accuracy)
-    # valutazione sulle predizioni (valori uguali) + ROC AUC score
-    y_preds = (model.predict(X_test_seq) > 0.5).astype('int32')
-    print(f'The accuracy score is {accuracy_score(y_test, y_preds)}')
-    print(f'The ROC AUC score is {roc_auc_score(y_test, y_preds)}')
-
-    # print the confusion matrix to visualize correctly labeled data
-    cm = confusion_matrix(y_test, y_preds)
-
-    print('CONFUSION MATRIX\n\n', cm)
-
-    print(f'True Positive: {cm[0, 0]}\n')
-
-    print(f'True Negative: {cm[1, 1]}\n')
-
-    print(f'False Positive: {cm[0, 1]}\n')
-
-    print(f'False Negative: {cm[1, 0]}\n')
-
-    cm_matrix = pd.DataFrame(data=cm, columns=['Actual Positive:1', 'Actual Negative:0'],
-                             index=['Predict Positive:1', 'Predict Negative:0'])
-
-    sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
-    plt.show()
-    return model, X_test_seq
+    return model

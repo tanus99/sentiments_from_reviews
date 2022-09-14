@@ -82,6 +82,8 @@ def multiprocesses_it(df):
     #
     while not q.empty():
         corpus.append(q.get())
+        time.sleep(0.001)
+
 
 
 # creating the Bag of Words model

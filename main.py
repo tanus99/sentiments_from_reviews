@@ -17,6 +17,7 @@ from tensorflow.python.keras.preprocessing.sequence import pad_sequences
 
 from classifiers import *
 from preparing_methods import *
+from utils import *
 
 # just import and read the data
 df = pd.read_csv('./data/reviews.csv')
@@ -40,47 +41,53 @@ nltk.download('stopwords')
 
 # print(set(stopwords.words('english')))
 
+# --ALERT!-- decommentare il metodo multiprocesses_it solo se si vuole utilizzare il metodo di estrazione
+# bag of words o tf-idf.
+
+# --ALERT!-- decommentare un solo metodo di estrazione delle features per volta, o bag of words o tf_idf
+# in quanto X,y corrispondenti verranno poi usati per effettuare lo splitting
 
 # multiprocesses_it(df)
 # X, y = bag_of_words(df)
 # X, y = tf_idf(df)
 print(len(corpus))
-
-# split del dataset in train e test set
+# split del dataset in train e test set con i metodi di estrazione delle features bag of words o tf-idf
 # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=6, stratify=y)
 
-# risultati con il metodo di estrazione delle features bag of words
-# random_forest_classifier(X_train, y_train, X_test, y_test)
-# SVM(X_train, y_train, X_test, y_test)
-# multinomial_NB(X_train, y_train, X_test, y_test)
+# risultati con il metodo di estrazione delle features bag of words o TF-IDF
+# --ALERT!-- decommentare il modello per addestrarlo accompagnato dal metodo save_obj per salvare il modello
+# Una volta memorizzato in locale, commentare il modello e il metodo save_obj e decommentare 'reconstructed_model'
+# --ALERT!-- ripetere quanto descritto sopra per ogni classificatore
 
-
-# risultati con il metodo di estrazione delle features TD-IDF
-# random_forest_classifier(X_train, y_train, X_test, y_test)
-# SVM(X_train, y_train, X_test, y_test)
+# model = random_forest_classifier(X_train, y_train, X_test, y_test)
+# save_obj(model,'random_forest')
+# reconstructed_model = read_obj('random_forest')
+# model =  SVM(X_train, y_train, X_test, y_test)
+# save_obj(model,'svm')
+# reconstructed_model = read_obj('svm')
 # model = multinomial_NB(X_train, y_train, X_test, y_test)
+# save_obj(model,'naive_bayes')
+# reconstructed_model = read_obj('naive_bayes')
+
+# --ALERT!-- una volta letto il modello puoi valutare le performance
+# print_performance_metrics(reconstructed_model,X_test,y_test)
+# print_confusion_matrix(reconstructed_model,X_test,y_test)
+
 
 # risultati con il modello CNN
 X = df['Review Text']
 y = df['Recommended IND']
 
+# decommentare solo se visualizzare i risultati della rete CNN poichè l'input dello splitting è
+# diverso dai casi precedenti
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=6, stratify=y)
 
-model, X_test_seq = get_cnn_model(X_train,X_test,y_train,y_test)
+# --ALERT!-- decommentare il modello per addestrarlo accompagnato dal metodo save_obj per salvare il modello
+# Una volta memorizzato in locale, commentare il modello e il metodo save_obj e decommentare 'reconstructed_model'
 
-# salva l'oggetto contenente il classificatore addestrato
-def save_obj(model, filename):
-    model.save(filename)
-
-
-# carica l'oggetto contenente il classificatore addestrato
-def read_obj(filename):
-    model = keras.models.load_model(filename)
-    return model
-
-
-save_obj(model, 'CNN')
-reconstructed_model = read_obj('CNN')
-y_preds = (reconstructed_model.predict(X_test_seq) > 0.5).astype('int32')
-print(f'The accuracy score is {accuracy_score(y_test, y_preds)}')
-print(f'The ROC AUC score is {roc_auc_score(y_test, y_preds)}')
+# model = get_cnn_model(X_train,X_test,y_train)
+# save_obj(model, 'cnn')
+reconstructed_model = read_obj('cnn')
+_, _, _, X_test_seq = preprocessing_CNN(X_train,X_test)
+print_performance_metrics(reconstructed_model,X_test_seq,y_test)
+print_confusion_matrix(reconstructed_model, X_test_seq, y_test)
