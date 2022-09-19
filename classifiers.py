@@ -165,7 +165,7 @@ def multinomial_NB(X_train, y_train, X_test, y_test):
 
 
 # Fourth classifier - CNN
-def get_cnn_model(X_train, X_test, y_train):
+def get_cnn_model(X_train, y_train):
     # ---------- attributi per la rete convoluzionale ----------
     loss = 'binary_crossentropy'
     metrics = ['accuracy']
@@ -175,7 +175,7 @@ def get_cnn_model(X_train, X_test, y_train):
     batch_size = 128
     validation_split = 0.2
 
-    max_words, max_len, X_train_seq, _ = preprocessing_CNN(X_train, X_test)
+    max_words, max_len, X_train_seq, tokenizer = preprocessing_CNN(X_train)
     model = Sequential()
 
     # It is an improvement over more the traditional
@@ -242,4 +242,4 @@ def get_cnn_model(X_train, X_test, y_train):
     elapsed_time = time.time() - start_time
     print(f"\nElapsed Time: {elapsed_time} sec")
 
-    return model
+    return model,tokenizer

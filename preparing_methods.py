@@ -127,7 +127,7 @@ def tf_idf(df):
     # print(tfidf_matrix.drop(columns=['count']).head(100))
 
 # preparing the data for the CNN model
-def preprocessing_CNN(X_train,X_test):
+def preprocessing_CNN(X_train):
 
     # metto insieme tutte le parole in un unico testo, splitto
     # e conto il numero di parole uniche presenti
@@ -146,8 +146,7 @@ def preprocessing_CNN(X_train,X_test):
     # we pad to be sure that all the reviews have the same lenght
     X_train_seq = pad_sequences(X_train_seq, maxlen=max_len)
 
-    X_test_seq = tokenizer.texts_to_sequences(X_test)
-    X_test_seq = pad_sequences(X_test_seq, maxlen=max_len)
 
-    return max_words,max_len,X_train_seq,X_test_seq
+
+    return max_words,max_len,X_train_seq,tokenizer
 

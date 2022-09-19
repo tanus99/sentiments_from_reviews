@@ -85,9 +85,14 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # --ALERT!-- decommentare il modello per addestrarlo accompagnato dal metodo save_obj per salvare il modello
 # Una volta memorizzato in locale, commentare il modello e il metodo save_obj e decommentare 'reconstructed_model'
 
-# model = get_cnn_model(X_train,X_test,y_train)
+# model, tokenizer = get_cnn_model(X_train,y_train)
 # save_obj(model, 'cnn')
+# save_obj(tokenizer, 'tokenizer')
 reconstructed_model = read_obj('cnn')
-_, _, _, X_test_seq = preprocessing_CNN(X_train,X_test)
+tokenizer = read_obj('tokenizer')
+_, max_len, _, _ = preprocessing_CNN(X_train)
+X_test_seq = tokenizer.texts_to_sequences(X_test)
+X_test_seq = pad_sequences(X_test_seq, maxlen=max_len)
+
 print_performance_metrics(reconstructed_model,X_test_seq,y_test)
 print_confusion_matrix(reconstructed_model, X_test_seq, y_test)
