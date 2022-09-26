@@ -1,6 +1,8 @@
+import os
 import time
 
 import pandas as pd
+from keras import regularizers
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix, roc_auc_score, accuracy_score
 from sklearn.model_selection import GridSearchCV
@@ -14,16 +16,15 @@ import seaborn as sns
 from IPython.display import Image
 import pydotplus
 from six import StringIO
-from keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dropout, BatchNormalization, Dense
+from keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dropout, BatchNormalization, Dense, Flatten
 from keras.models import Sequential
 
-# first classifier - RandomForest
+# Primo classificatore - RandomForest
 from preparing_methods import preprocessing_CNN
 
 
-def random_forest_classifier(X_train, y_train, X_test, y_test):
-    # let's see different configurations for the RandomForestClassifier
-    # using GridSearchCV
+def random_forest_classifier(X_train, y_train):
+    # vediamo diverse configurazioni per RandomForestClassifier usando GridSearchCV
     model = RandomForestClassifier(criterion='entropy', random_state=6)
 
     params = [{'n_estimators': [500, 1000, 1500], 'max_depth': [10, 20, 25],
@@ -34,105 +35,43 @@ def random_forest_classifier(X_train, y_train, X_test, y_test):
 
     grid_search.fit(X_train, y_train)
 
-    # print the best configuration parameters and the model
+    # stampa i migliori parametri di configurazione e lo score del modello migliore
     print(f'The best parameters for the model are {grid_search.best_params_}')
-    print(f'The best score for the model is {grid_search.best_score_}')
+    print(f'The best accuracy score for the model is {grid_search.best_score_}')
 
-    # extract the best model
+    # estrae il modello migliore
     best_model = grid_search.best_estimator_
 
-    y_preds = best_model.predict(X_test)
-
-    # accuracy of the model (n. or % of corrected labeled data)
-    print(f'Accuracy of the model {metrics.accuracy_score(y_test, y_preds)}')
-
-    # roc_auc_score
-    roc_auc = roc_auc_score(y_test, y_preds)
-    print(f'ROC AUC : {roc_auc}')
-
-    # print the confusion matrix to visualize correctly labeled data
-    cm = confusion_matrix(y_test, y_preds)
-
-    print('CONFUSION MATRIX\n\n', cm)
-
-    print(f'True Positive: {cm[0, 0]}\n')
-
-    print(f'True Negative: {cm[1, 1]}\n')
-
-    print(f'False Positive: {cm[0, 1]}\n')
-
-    print(f'False Negative: {cm[1, 0]}\n')
-
-    cm_matrix = pd.DataFrame(data=cm, columns=['Actual Positive:1', 'Actual Negative:0'],
-                             index=['Predict Positive:1', 'Predict Negative:0'])
-
-    sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
-    plt.show()
-
-    # show the tree (the fifth just to see the general behavior)
-    tree = best_model.estimators_[5]
-    dot_data = StringIO()
-    export_graphviz(tree, out_file=dot_data,
-                    filled=True, rounded=True,
-                    special_characters=True,
-                    class_names=['0', '1'])
-    graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
-    graph.write_png('reviews.png')
-    Image(graph.create_png())
     return best_model
 
 
-# second classifier - SVM
-def SVM(X_train, y_train, X_test, y_test):
+# Secondo classificatore - SVM
+def SVM(X_train, y_train):
     svc = SVC(random_state=6)
 
-    # we will discuss these different configuration
+    # valuteremo la configurazione migliore considerando tutti questi parametri
     params = [{'C': [0.001, 0.01, 0.1, 1, 10, 100], 'kernel': ['linear', 'poly', 'rbf'],
                'gamma': [0.001, 0.01, 0.1, 1, 10, 100]}]
 
-    # create the grid search object for the purpose
+    # per lo scopo utilizziamo l'oggetto GridSearch
     grid_search = GridSearchCV(estimator=svc, param_grid=params, scoring='accuracy',
                                n_jobs=-1, cv=5, verbose=3)
 
     grid_search.fit(X_train, y_train)
 
-    # print the best configuration parameters and the model
+    # stampa i migliori parametri di configurazione e lo score del modello migliore
     print(f'The best parameters for the model are {grid_search.best_params_}')
-    print(f'The best score for the model is {grid_search.best_score_}')
+    print(f'The best accuracy score for the model is {grid_search.best_score_}')
 
-    # extract the best model
+    # estrae il modello migliore
     best_estimator = grid_search.best_estimator_
 
-    # evaluate the accuracy score and the ROC AUC score for the best estimator
-    y_preds = best_estimator.predict(X_test)
-
-    print(f'The accuracy score for the best SVM classifier is {accuracy_score(y_test, y_preds)}')
-    print(f'The ROC AUC score for the best SVM classifier is {roc_auc_score(y_test, y_preds)}')
-
-    # extract the confusion matrix for the best estimator
-    cm = confusion_matrix(y_test, y_preds)
-
-    print('CONFUSION MATRIX\n\n', cm)
-
-    print(f'True Positive: {cm[0, 0]}\n')
-
-    print(f'True Negative: {cm[1, 1]}\n')
-
-    print(f'False Positive: {cm[0, 1]}\n')
-
-    print(f'False Negative: {cm[1, 0]}\n')
-
-    cm_matrix = pd.DataFrame(data=cm, columns=['Actual Positive:1', 'Actual Negative:0'],
-                             index=['Predict Positive:1', 'Predict Negative:0'])
-
-    sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
-    plt.show()
     return best_estimator
 
 
-# third classifier - Naive Bayes (Multinominal)
+# Terzo classificatore - Naive Bayes (Multinominal)
 
-def multinomial_NB(X_train, y_train, X_test, y_test):
+def multinomial_NB(X_train, y_train):
     MNB = MultinomialNB()
     MNB.fit(X_train, y_train)
     return MNB
@@ -164,57 +103,65 @@ def multinomial_NB(X_train, y_train, X_test, y_test):
     # print(ris)
 
 
-# Fourth classifier - CNN
+# Quarto classificatore - CNN
 def get_cnn_model(X_train, y_train):
     # ---------- attributi per la rete convoluzionale ----------
     loss = 'binary_crossentropy'
     metrics = ['accuracy']
     learning_rate = 0.001
     verbose = 1
-    epochs = 50
+    epochs = 30
     batch_size = 128
     validation_split = 0.2
+    l2 = regularizers.L2(0.08)
 
     max_words, max_len, X_train_seq, tokenizer = preprocessing_CNN(X_train)
     model = Sequential()
 
-    # It is an improvement over more the traditional
-    # bag-of-word model encoding schemes where large sparse
-    # vectors were used to represent each word or to score
-    # each word within a vector to represent an entire
-    # vocabulary. These representations were sparse because
-    # the vocabularies were vast and a given word or
-    # document would be represented by a large vector
-    # comprised mostly of zero values.
-    # Instead, in an embedding, words are represented
-    # by dense vectors where a vector represents the
-    # projection of the word into a continuous vector space.
-    # The position of a word within the vector space is
-    # learned from text and is based on the words
-    # that surround the word when it is used.
-    model.add(Embedding(max_words, 100, input_length=max_len))
+    # -- EMBEDDING LAYER --
+    # È un miglioramento rispetto ai tradizionali schemi di codifica del modello bag-of-word
+    # in cui sono stati utilizzati grandi vettori sparsi per rappresentare ogni parola o per
+    # assegnare un punteggio a ciascuna parola all'interno di un vettore per rappresentare un 
+    # intero vocabolario. Queste rappresentazioni erano scarse perché i vocabolari erano vasti 
+    # e una data parola o documento sarebbe stato rappresentato da un grande vettore composto 
+    # principalmente da valori zero. Invece, in un embedding, le parole sono rappresentate da 
+    # vettori densi in cui un vettore rappresenta la proiezione della parola in uno spazio vettoriale
+    # continuo. La posizione di una parola all'interno dello spazio vettoriale viene appresa dal
+    # testo e si basa sulle parole che circondano la parola quando viene utilizzata.
+    
+    # -- CONV1D LAYER --
+    # Permette di realizzare la convoluzione ad una dimensione per poter estrarre le informazioni utili
+    # alla predizione direttamente dalle recensioni proiettate nello spazio vettoriale grazie all'embedding
+    # layer. Crea la feature map che riassume la presenza delle features cercate nell'input dato
 
-    model.add(Conv1D(1024, 3, padding='valid', activation='relu', strides=1))
-    model.add(GlobalMaxPooling1D())
-    # The Dropout layer randomly sets input units to 0 with a
-    # frequency of rate at each step during training time,
-    # which helps prevent overfitting. Inputs not set to 0
-    # are scaled up by 1/(1 - rate) such that the sum over all
-    # inputs is unchanged.
-    model.add(Dropout(0.5))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.5))
+    # -- GLOBALMAXPOOLING1D LAYER --
+    # Estrae il valore massimo da ciascun filro. Serve per ridurre la dimensionalità
+    # delle features estratte
 
-    model.add(Dense(2048, activation='relu'))
+    
+    # -- DROPOUT LAYER --
+    # Imposta in modo casuale le unità di input su 0 con una frequenza pari a quella indicata 
+    # come parametro e questo ad ogni step durante il tempo di allenamento, il che aiuta a prevenire 
+    # l'overfitting. Gli ingressi non impostati su 0 vengono aumentati di 1/(1 - rate) 
+    # in modo tale che la somma di tutti gli ingressi rimanga invariata.
 
-    model.add(Dropout(0.5))
+    # -- BATCH NORMALIZATION --
     # normalizza il suo input in maniera tale da avere una
     # distribuzione con la media vicino allo 0 e deviazione
-    # standard vicino a 1
-    model.add(BatchNormalization())
+    # standard vicino a 1. Serve ad accelerare il training e per permettere
+    # l'utilizzo di learning rate più alti, rendendo il learning più semplice e veloce.
+    
+    model.add(Embedding(max_words, 100, input_length=max_len))
+    model.add(Conv1D(16, 3, padding='valid', activation='relu', strides=1, kernel_regularizer=l2))
+    model.add(GlobalMaxPooling1D())
     model.add(Dropout(0.5))
-
-    model.add(Dense(1, activation='sigmoid'))
+    model.add(BatchNormalization())
+    # model.add(Dropout(0.5))
+    model.add(Dense(250, activation='relu', kernel_regularizer=l2))
+    model.add(Dropout(0.5))
+    # model.add(BatchNormalization())
+    # model.add(Dropout(0.5))
+    model.add(Dense(1, activation='sigmoid', kernel_regularizer=l2))
 
     model.summary()
 
@@ -229,7 +176,7 @@ def get_cnn_model(X_train, y_train):
     model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
     print("Trainning Model ...\n")
-    model.fit(
+    history = model.fit(
         X_train_seq,
         y_train,
         batch_size=batch_size,
@@ -241,5 +188,27 @@ def get_cnn_model(X_train, y_train):
 
     elapsed_time = time.time() - start_time
     print(f"\nElapsed Time: {elapsed_time} sec")
+
+    root_path = os.path.join(os.getcwd(), 'img')
+
+    # stampo l'andamento dell'accuracy
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'validation'], loc='upper left')
+    plt.savefig(f"{root_path}/accuracy.png")
+    plt.show()
+
+    # stampo l'andamento del loss
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'validation'], loc='upper left')
+    plt.savefig(f"{root_path}/loss.png")
+    plt.show()
 
     return model,tokenizer

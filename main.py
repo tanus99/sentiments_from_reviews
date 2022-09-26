@@ -50,7 +50,7 @@ nltk.download('stopwords')
 # multiprocesses_it(df)
 # X, y = bag_of_words(df)
 # X, y = tf_idf(df)
-print(len(corpus))
+# print(len(corpus))
 # split del dataset in train e test set con i metodi di estrazione delle features bag of words o tf-idf
 # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=6, stratify=y)
 
@@ -59,19 +59,31 @@ print(len(corpus))
 # Una volta memorizzato in locale, commentare il modello e il metodo save_obj e decommentare 'reconstructed_model'
 # --ALERT!-- ripetere quanto descritto sopra per ogni classificatore
 
-# model = random_forest_classifier(X_train, y_train, X_test, y_test)
-# save_obj(model,'random_forest')
-# reconstructed_model = read_obj('random_forest')
-# model =  SVM(X_train, y_train, X_test, y_test)
-# save_obj(model,'svm')
-# reconstructed_model = read_obj('svm')
-# model = multinomial_NB(X_train, y_train, X_test, y_test)
-# save_obj(model,'naive_bayes')
-# reconstructed_model = read_obj('naive_bayes')
+# start_time = time.time()
+# model = random_forest_classifier(X_train, y_train)
+# save_obj(model,'random_forest_bow')
+# reconstructed_model = read_obj('random_forest_bow')
+# save_obj(model,'random_forest_tfidf')
+# reconstructed_model = read_obj('random_forest_tfidf')
+
+# model =  SVM(X_train, y_train)
+
+# save_obj(model,'svm_bow')
+# reconstructed_model = read_obj('svm_bow')
+# save_obj(model,'svm_tfidf')
+# reconstructed_model = read_obj('svm_tfidf')
+
+# model = multinomial_NB(X_train, y_train)
+# elapsed_time = time.time() - start_time
+# print(f"\nElapsed Time: {elapsed_time} sec")
+# save_obj(model,'naive_bayes_bow')
+# reconstructed_model = read_obj('naive_bayes_bow')
+# save_obj(model,'naive_bayes_tfidf')
+# reconstructed_model = read_obj('naive_bayes_tfidf')
 
 # --ALERT!-- una volta letto il modello puoi valutare le performance
-# print_performance_metrics(reconstructed_model,X_test,y_test)
-# print_confusion_matrix(reconstructed_model,X_test,y_test)
+# print_performance_metrics(model,X_test,y_test)
+# print_confusion_matrix(model,X_test,y_test, 'naive_bayes_tfidf')
 
 
 # risultati con il modello CNN
@@ -85,14 +97,14 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # --ALERT!-- decommentare il modello per addestrarlo accompagnato dal metodo save_obj per salvare il modello
 # Una volta memorizzato in locale, commentare il modello e il metodo save_obj e decommentare 'reconstructed_model'
 
-# model, tokenizer = get_cnn_model(X_train,y_train)
-# save_obj(model, 'cnn')
-# save_obj(tokenizer, 'tokenizer')
-reconstructed_model = read_obj('cnn')
-tokenizer = read_obj('tokenizer')
+model, tokenizer = get_cnn_model(X_train,y_train)
+save_obj(model, 'cnn')
+save_obj(tokenizer, 'tokenizer')
+# reconstructed_model = read_obj('cnn')
+# tokenizer = read_obj('tokenizer')
 _, max_len, _, _ = preprocessing_CNN(X_train)
 X_test_seq = tokenizer.texts_to_sequences(X_test)
 X_test_seq = pad_sequences(X_test_seq, maxlen=max_len)
 
-print_performance_metrics(reconstructed_model,X_test_seq,y_test)
-print_confusion_matrix(reconstructed_model, X_test_seq, y_test)
+print_performance_metrics(model,X_test_seq,y_test)
+print_confusion_matrix(model, X_test_seq, y_test, 'cnn')

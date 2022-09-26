@@ -1,24 +1,52 @@
+import os.path
 import pickle
 
 import pandas as pd
-from sklearn.metrics import accuracy_score, roc_auc_score, confusion_matrix
+from sklearn.metrics import accuracy_score, roc_auc_score, confusion_matrix, roc_curve
 import seaborn as sns
 from matplotlib import pyplot as plt
 from tensorflow import keras
 
+# crea la cartella img
+def create_dir():
+    global root_path
+    root_path = os.path.join(os.getcwd(), 'img')
 
+    if not os.path.exists(root_path):
+        os.makedirs(root_path, exist_ok=True)
+
+# stampo la curva ROC
+def plot_roc_auc_curve(fpr, tpr, roc_auc, filename):
+
+    plt.plot(fpr, tpr, label='ROC curve (area = %0.3f)' % roc_auc)
+    plt.plot([0, 1], [0, 1], 'k--')  # random predictions curve
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.0])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic')
+    plt.legend(loc="lower right")
+
+    plt.savefig(f"{root_path}/{filename}_roc_curve.png")
+
+# stampo le performance del modello sul test set
 def print_performance_metrics(model, X_test, y_test):
     # valutiamo l'accuracy sulla parte di test
     # accuracy = model.evaluate(X_test_seq, y_test)
     # print(accuracy)
-    # valutazione sulle predizioni (valori uguali) + ROC AUC score
+    # valutazione sulle predizioni (valore uguale al precedente metodo)
+    # - accuratezza del modello(n.o % di dati etichettati corretti)
+    # - ROC AUC score
     y_preds = (model.predict(X_test) > 0.5).astype('int32')
-    print(f'The accuracy score is {accuracy_score(y_test, y_preds)}')
-    print(f'The ROC AUC score is {roc_auc_score(y_test, y_preds)}')
+    print(f'The accuracy score on test set is {accuracy_score(y_test, y_preds)}')
+    print(f'The ROC AUC score on test set is {roc_auc_score(y_test, y_preds)}')
 
-def print_confusion_matrix(model, X_test, y_test):
+# stampo la matrice di confusione
+def print_confusion_matrix(model, X_test, y_test, filename):
+    create_dir()
+
     y_preds = (model.predict(X_test) > 0.5).astype('int32')
-    # print the confusion matrix to visualize correctly labeled data
+    # stampa la matrice di confusione per visualizzare i dati correttamente etichettati
     cm = confusion_matrix(y_test, y_preds)
 
     print('CONFUSION MATRIX\n\n', cm)
@@ -34,7 +62,13 @@ def print_confusion_matrix(model, X_test, y_test):
     cm_matrix = pd.DataFrame(data=cm, columns=['Actual Positive:1', 'Actual Negative:0'],
                              index=['Predict Positive:1', 'Predict Negative:0'])
 
-    sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
+    plot = sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
+    root_path = os.path.join(os.getcwd(),'img')
+
+    if not os.path.exists(root_path):
+        os.makedirs(root_path,exist_ok=True)
+
+    plot.figure.savefig(f"{root_path}/{filename}_cm.png")
     plt.show()
 
     # ricavo gli altri parametri di performance dalla confusion matrix
@@ -54,25 +88,38 @@ def print_confusion_matrix(model, X_test, y_test):
           f'Specificity: {specificity}\n'
           f'F1 Score: {f1_score}')
 
+    # ricavo i parametri utili alla rappresentazione della curva ROC
+    fpr, tpr, _ = roc_curve(y_test,y_preds)
+    roc_auc = roc_auc_score(y_test, y_preds)
+
+    plot_roc_auc_curve(fpr,tpr,roc_auc, filename)
+
 
 # salva l'oggetto contenente il classificatore addestrato
 def save_obj(model, filename):
+    root_path = os.getcwd()
+    root_path = os.path.join(root_path, 'models')
+    if not os.path.exists(root_path):
+        os.makedirs(root_path,exist_ok=True)
+
     filename = filename.upper()
     if(filename == 'CNN'):
         model.save(filename)
     else:
-        with open(f'{filename}.pkl','wb') as file:
+        with open(f'{root_path}/{filename}.pkl','wb') as file:
             pickle.dump(model,file)
 
 
 # carica l'oggetto contenente il classificatore addestrato
 def read_obj(filename):
+    root_path = os.getcwd()
+    root_path = os.path.join(root_path, 'models')
     filename = filename.upper()
     if(filename == 'CNN'):
         model = keras.models.load_model(filename)
         return model
     else:
-        with open(f'{filename}.pkl', 'rb') as file:
+        with open(f'{root_path}/{filename}.pkl', 'rb') as file:
             model = pickle.load(file)
             return model
 
