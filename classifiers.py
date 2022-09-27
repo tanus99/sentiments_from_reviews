@@ -42,6 +42,17 @@ def random_forest_classifier(X_train, y_train):
     # estrae il modello migliore
     best_model = grid_search.best_estimator_
 
+    # show the tree (the fifth just to see the general behavior)
+    tree = best_model.estimators_[5]
+    dot_data = StringIO()
+    export_graphviz(tree, out_file=dot_data,
+                    filled=True, rounded=True,
+                    special_characters=True,
+                    class_names=['0', '1'])
+    graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
+    graph.write_png('reviews.png')
+    Image(graph.create_png())
+
     return best_model
 
 
